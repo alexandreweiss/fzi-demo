@@ -1,0 +1,36 @@
+# Backbone creation
+module "backbone" {
+  source  = "terraform-aviatrix-modules/backbone/aviatrix"
+  version = "v8.0.0"
+
+  global_settings = {
+
+    transit_accounts = {
+      aws = var.aws_account
+    }
+
+    transit_ha_gw = false
+
+  }
+
+  transit_firenet = {
+
+    #First AWS region
+    transit1a = {
+      transit_cloud       = "aws",
+      transit_cidr        = "10.1.0.0/23",
+      transit_region_name = var.aws_r1_location,
+      transit_asn         = 65101
+      name                = "avx-${var.aws_r1_location_short}-transit"
+    },
+
+    #2nd AWS region
+    transit1b = {
+      transit_cloud       = "aws",
+      transit_cidr        = "10.1.2.0/23",
+      transit_region_name = var.aws_r2_location,
+      transit_asn         = 65102
+      name                = "avx-${var.aws_r2_location_short}-transit"
+    }
+  }
+}
