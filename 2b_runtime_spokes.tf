@@ -3,17 +3,20 @@ module "spoke_aws_r1_np_0" {
   source  = "terraform-aviatrix-modules/mc-spoke/aviatrix"
   version = "8.0.0"
 
-  cloud   = "AWS"
-  name    = "RuntimeA"
-  cidr    = "10.2.0.0/24"
-  region  = var.aws_r1_location
-  account = var.aws_account
-  # transit_gw     = module.backbone.transit.transit1a.transit_gateway.gw_name
-  # network_domain = module.network_domains.network_domains[0]
+  cloud          = "AWS"
+  name           = "RuntimeA"
+  cidr           = "10.2.0.0/21"
+  region         = var.aws_r1_location
+  account        = var.aws_account
+  transit_gw     = module.backbone.transit.transit1a.transit_gateway.gw_name
+  network_domain = module.network_domains.network_domains[1]
   ha_gw          = false
-  attached       = false
+  attached       = true
   single_ip_snat = true
+  subnet_size    = "24"
+  subnet_pairs   = "2"
 }
+
 
 # module "spoke_aws_r1_np_1" {
 #   source  = "terraform-aviatrix-modules/mc-spoke/aviatrix"
@@ -25,7 +28,7 @@ module "spoke_aws_r1_np_0" {
 #   region         = var.aws_r1_location
 #   account        = var.aws_account
 #   transit_gw     = module.backbone.transit.transit1a.transit_gateway.gw_name
-#   network_domain = module.network_domains.network_domains[0]
+#   network_domain = module.network_domains.network_domains[1]
 #   ha_gw          = false
 # }
 
@@ -53,7 +56,7 @@ module "spoke_aws_r1_np_0" {
 #   region         = var.aws_r2_location
 #   account        = var.aws_account
 #   transit_gw     = module.backbone.transit.transit1b.transit_gateway.gw_name
-#   network_domain = module.network_domains.network_domains[0]
+#   network_domain = module.network_domains.network_domains[1]
 #   ha_gw          = false
 # }
 
@@ -69,7 +72,7 @@ module "spoke_aws_r1_np_0" {
 #   region         = var.aws_r1_location
 #   account        = var.aws_account
 #   transit_gw     = module.backbone.transit.transit1a.transit_gateway.gw_name
-#   network_domain = module.network_domains.network_domains[1]
+#   network_domain = module.network_domains.network_domains[3]
 #   ha_gw          = false
 # }
 

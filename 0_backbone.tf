@@ -22,15 +22,15 @@ module "backbone" {
       transit_region_name = var.aws_r1_location,
       transit_asn         = 65101
       name                = "avx-${var.aws_r1_location_short}-transit"
-    },
+    }
 
     #2nd AWS region
-    transit1b = {
-      transit_cloud       = "aws",
-      transit_cidr        = "10.1.2.0/23",
-      transit_region_name = var.aws_r2_location,
-      transit_asn         = 65102
-      name                = "avx-${var.aws_r2_location_short}-transit"
-    }
+    # transit1b = {
+    #   transit_cloud       = "aws",
+    #   transit_cidr        = "10.1.2.0/23",
+    #   transit_region_name = var.aws_r2_location,
+    #   transit_asn         = 65102
+    #   name                = "avx-${var.aws_r2_location_short}-transit"
+    # }
   }
 }

@@ -9,13 +9,21 @@ terraform {
     ssh = {
       source = "loafoe/ssh"
     }
-  }
-  cloud {
-    organization = "ananableu"
-    workspaces {
-      name = "fzi-demo"
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.23"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.4"
     }
   }
+  # cloud {
+  #   organization = "ananableu"
+  #   workspaces {
+  #     name = "fzi-demo"
+  #   }
+  # }
 }
 
 provider "aviatrix" {
@@ -33,3 +41,4 @@ provider "azurerm" {
 
 provider "aws" {
 }
+

@@ -60,30 +60,6 @@ variable "aws_r2_location_short" {
   type        = string
 }
 
-variable "gcp_r1_location" {
-  default     = "europe-west1"
-  description = "region to deploy resources"
-  type        = string
-}
-
-variable "gcp_r1_location_short" {
-  default     = "we"
-  description = "region to deploy resources"
-  type        = string
-}
-
-variable "oci_r1_location" {
-  default     = "France Central"
-  description = "region to deploy resources"
-  type        = string
-}
-
-variable "oci_r1_location_short" {
-  default     = "frc"
-  description = "region to deploy resources"
-  type        = string
-}
-
 variable "admin_password" {
   sensitive   = true
   description = "Admin password"
@@ -94,40 +70,34 @@ variable "controller_fqdn" {
   sensitive   = true
 }
 
-variable "ferme_fqdn" {
-  description = "FQDN of Ferme ISP"
-  sensitive   = true
-}
-
 variable "ssh_public_key" {
   sensitive   = true
   description = "SSH public key for VM administration"
-}
-
-variable "azure_account" {
-  description = "CSP account onboarder on the controller"
 }
 
 variable "aws_account" {
   description = "CSP account onboarder on the controller"
 }
 
-variable "gcp_account" {
-  description = "CSP account onboarder on the controller"
-}
-
-variable "oci_account" {
-  description = "CSP account onboarder on the controller"
-}
-
 variable "use_profile" {
   type        = bool
   description = "Use profile for AWS provider"
-  default     = false
+  default     = true
 }
 
 variable "pod_arn" {
   type        = string
   description = "AWS arn role for the admin permissions for the pod."
-  default     = "1234"
+  # default     = "arn:aws:iam::211098808963:user/admin-key"
+  default = "dummy"
+}
+
+variable "human_admin_arn" {
+  description = "ARN of the human admin user"
+}
+
+variable "deploy_vpn_gateway" {
+  type        = bool
+  default     = true
+  description = "Whether to deploy the VPN gateway in control plane VPC"
 }
