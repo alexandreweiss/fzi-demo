@@ -9,15 +9,19 @@ module "eks_runtimeA" {
   private_subnet_ids        = module.spoke_aws_r1_np_0.vpc.private_subnets.*.subnet_id
   aviatrix_aws_account_arn  = data.aviatrix_account.aws.aws_role_arn
   control_plane_subnet_cidr = data.aws_subnet.control_plane_subnet_0.cidr_block
-  depends_on                = [module.spoke_aws_r1_np_0]
+  depends_on                = [module.spoke_aws_r1_np_0, aviatrix_gateway.vpn_aws_r1_control_plane_0]
 }
 
 # Data sources for EKS clusters
 data "aws_eks_cluster" "runtimeA" {
+  count = var.get_eks_config ? 1 : 0
+
   name = module.eks_runtimeA.eks.cluster_name
 }
 
 data "aws_eks_cluster_auth" "runtimeA" {
+  count = var.get_eks_config ? 1 : 0
+
   name = module.eks_runtimeA.eks.cluster_name
 }
 
@@ -31,11 +35,12 @@ data "aws_eks_cluster_auth" "runtimeA" {
 # }
 
 # Kubernetes providers with aliases
+# Manual uncomment after cluster creation
 provider "kubernetes" {
   alias                  = "runtimeA"
-  host                   = data.aws_eks_cluster.runtimeA.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.runtimeA.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.runtimeA.token
+  host                   = data.aws_eks_cluster.runtimeA[0].endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.runtimeA[0].certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.runtimeA[0].token
 }
 
 # provider "kubernetes" {
@@ -47,6 +52,8 @@ provider "kubernetes" {
 
 # Kubernetes resources for runtimeA cluster
 resource "kubernetes_service_account" "avx_controller_runtimeA" {
+  count = var.get_eks_config ? 1 : 0
+
   provider = kubernetes.runtimeA
 
   metadata {
@@ -55,15 +62,17 @@ resource "kubernetes_service_account" "avx_controller_runtimeA" {
   }
 }
 
-# Create the ServiceAccount token secret manually (required for K8s 1.24+)
+# # Create the ServiceAccount token secret manually (required for K8s 1.24+)
 resource "kubernetes_secret" "avx_controller_token_runtimeA" {
+  count = var.get_eks_config ? 1 : 0
+
   provider = kubernetes.runtimeA
 
   metadata {
     name      = "avx-controller"
     namespace = "kube-system"
     annotations = {
-      "kubernetes.io/service-account.name" = kubernetes_service_account.avx_controller_runtimeA.metadata[0].name
+      "kubernetes.io/service-account.name" = kubernetes_service_account.avx_controller_runtimeA[0].metadata[0].name
     }
   }
 
@@ -71,6 +80,8 @@ resource "kubernetes_secret" "avx_controller_token_runtimeA" {
 }
 
 resource "kubernetes_cluster_role" "avx_controller_runtimeA" {
+  count = var.get_eks_config ? 1 : 0
+
   provider = kubernetes.runtimeA
 
   metadata {
@@ -103,6 +114,8 @@ resource "kubernetes_cluster_role" "avx_controller_runtimeA" {
 }
 
 resource "kubernetes_cluster_role_binding" "avx_controller_runtimeA" {
+  count = var.get_eks_config ? 1 : 0
+
   provider = kubernetes.runtimeA
 
   metadata {
@@ -142,27 +155,31 @@ resource "kubernetes_cluster_role_binding" "avx_controller_runtimeA" {
 #   # ... same configuration as runtimeA
 # }
 
-# Get the ServiceAccount token for kubeconfig
+# # Get the ServiceAccount token for kubeconfig
 data "kubernetes_secret" "avx_controller_token" {
+  count = var.get_eks_config ? 1 : 0
+
   provider = kubernetes.runtimeA
 
   metadata {
-    name      = kubernetes_secret.avx_controller_token_runtimeA.metadata[0].name
+    name      = kubernetes_secret.avx_controller_token_runtimeA[0].metadata[0].name
     namespace = "kube-system"
   }
 
   depends_on = [kubernetes_secret.avx_controller_token_runtimeA]
 }
 
-# Generate kubeconfig file using the template
+# # Generate kubeconfig file using the template
 resource "local_file" "kubeconfig_avx" {
+  count = var.get_eks_config ? 1 : 0
+
   filename = "${path.module}/kubeconfig-avx-controller"
 
   content = templatefile("${path.module}/kubeconfig", {
-    ca_data      = data.aws_eks_cluster.runtimeA.certificate_authority[0].data
-    endpoint     = data.aws_eks_cluster.runtimeA.endpoint
-    cluster_name = data.aws_eks_cluster.runtimeA.name
-    token        = data.kubernetes_secret.avx_controller_token.data["token"]
+    ca_data      = data.aws_eks_cluster.runtimeA[0].certificate_authority[0].data
+    endpoint     = data.aws_eks_cluster.runtimeA[0].endpoint
+    cluster_name = data.aws_eks_cluster.runtimeA[0].name
+    token        = data.kubernetes_secret.avx_controller_token[0].data["token"]
   })
 
   file_permission = "0600"
@@ -172,17 +189,19 @@ resource "local_file" "kubeconfig_avx" {
 output "kubeconfig_content" {
   description = "Generated kubeconfig content for avx-controller"
   value = templatefile("${path.module}/kubeconfig", {
-    ca_data      = data.aws_eks_cluster.runtimeA.certificate_authority[0].data
-    endpoint     = data.aws_eks_cluster.runtimeA.endpoint
-    cluster_name = data.aws_eks_cluster.runtimeA.name
-    token        = data.kubernetes_secret.avx_controller_token.data["token"]
+    ca_data      = data.aws_eks_cluster.runtimeA[0].certificate_authority[0].data
+    endpoint     = data.aws_eks_cluster.runtimeA[0].endpoint
+    cluster_name = data.aws_eks_cluster.runtimeA[0].name
+    token        = data.kubernetes_secret.avx_controller_token[0].data["token"]
   })
   sensitive = true
 }
 
 resource "aviatrix_kubernetes_cluster" "eks_runtimeA_onboarding" {
+  count = var.get_eks_config ? 1 : 0
+
   cluster_id  = module.eks_runtimeA.eks.cluster_arn
-  kube_config = local_file.kubeconfig_avx.content
+  kube_config = local_file.kubeconfig_avx[0].content
   cluster_details {
     account_name           = var.aws_account
     account_id             = data.aviatrix_account.aws.aws_account_number

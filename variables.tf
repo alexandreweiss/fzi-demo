@@ -101,3 +101,9 @@ variable "deploy_vpn_gateway" {
   default     = true
   description = "Whether to deploy the VPN gateway in control plane VPC"
 }
+
+variable "get_eks_config" {
+  type        = bool
+  default     = true
+  description = "Whether to get the EKS cluster config after creation"
+}
