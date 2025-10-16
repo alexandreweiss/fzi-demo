@@ -71,10 +71,10 @@ module "eks" {
     }
   }
 
-  # Allow private access to the cluster from the Aviatrix controller
+  # Allow private access to the cluster from the Aviatrix control plane
   cluster_security_group_additional_rules = {
-    avx_controller = {
-      cidr_blocks = [var.control_plane_subnet_cidr] # Address of the controller
+    avx_control_plane = {
+      cidr_blocks = var.control_plane_subnet_cidr # Address of the controller
       description = "Allow all traffic from Aviatrix controller and VPN clients"
       from_port   = 0
       to_port     = 0

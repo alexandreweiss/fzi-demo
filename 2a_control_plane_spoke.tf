@@ -56,6 +56,7 @@ resource "aviatrix_gateway" "vpn_aws_r1_control_plane_0" {
 }
 
 resource "aviatrix_vpn_user" "aweiss" {
+  count = var.deploy_vpn_gateway ? 1 : 0
 
   user_email = "aweiss@aviatrix.com"
   user_name  = "aweiss"

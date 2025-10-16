@@ -14,5 +14,5 @@
 variable "cluster_name" {}
 variable "vpc_id" {}
 variable "private_subnet_ids" {}
-variable "aviatrix_aws_account_arn" {}  # data.aviatrix_account.aws_account.aws_role_arn
-variable "control_plane_subnet_cidr" {} # Control plane subnet where controller is to open ingress to cluster
+variable "aviatrix_aws_account_arn" {}                       # data.aviatrix_account.aws_account.aws_role_arn
+variable "control_plane_subnet_cidr" { type = list(string) } # Control plane subnet where controller is to open ingress to cluster
