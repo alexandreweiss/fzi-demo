@@ -1,0 +1,12 @@
+apiVersion: networking.aviatrix.com/v1alpha1
+kind: WebgroupPolicy
+metadata:
+  name: webgrouppolicy-sample
+spec:
+  allowedDomains:
+    - aviatrix.com
+    - www.hashicorp.com
+    - amazon.cn
+  apiCategory: public
+  target:
+    type: namespace

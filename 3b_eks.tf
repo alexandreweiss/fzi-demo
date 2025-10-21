@@ -1,14 +1,10 @@
 # Data sources for EKS clusters
 data "aws_eks_cluster" "runtimeA" {
-  count = var.get_eks_config ? 1 : 0
-
   name       = module.eks_runtimeA.eks.cluster_name
   depends_on = [module.spoke_aws_r1_control_plane_0]
 }
 
 data "aws_eks_cluster_auth" "runtimeA" {
-  count = var.get_eks_config ? 1 : 0
-
   name       = module.eks_runtimeA.eks.cluster_name
   depends_on = [module.spoke_aws_r1_control_plane_0]
 }
@@ -17,16 +13,14 @@ data "aws_eks_cluster_auth" "runtimeA" {
 # Manual uncomment after cluster creation
 provider "kubernetes" {
   alias                  = "runtimeA"
-  host                   = data.aws_eks_cluster.runtimeA[0].endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.runtimeA[0].certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.runtimeA[0].token
+  host                   = data.aws_eks_cluster.runtimeA.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.runtimeA.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.runtimeA.token
 }
 
 
 # Kubernetes resources for runtimeA cluster
 resource "kubernetes_service_account" "avx_controller_runtimeA" {
-  count = var.get_eks_config ? 1 : 0
-
   provider = kubernetes.runtimeA
 
   metadata {
@@ -38,15 +32,13 @@ resource "kubernetes_service_account" "avx_controller_runtimeA" {
 
 # # Create the ServiceAccount token secret manually (required for K8s 1.24+)
 resource "kubernetes_secret" "avx_controller_token_runtimeA" {
-  count = var.get_eks_config ? 1 : 0
-
   provider = kubernetes.runtimeA
 
   metadata {
     name      = "avx-controller"
     namespace = "kube-system"
     annotations = {
-      "kubernetes.io/service-account.name" = kubernetes_service_account.avx_controller_runtimeA[0].metadata[0].name
+      "kubernetes.io/service-account.name" = kubernetes_service_account.avx_controller_runtimeA.metadata[0].name
     }
   }
 
@@ -55,8 +47,6 @@ resource "kubernetes_secret" "avx_controller_token_runtimeA" {
 }
 
 resource "kubernetes_cluster_role" "avx_controller_runtimeA" {
-  count = var.get_eks_config ? 1 : 0
-
   provider = kubernetes.runtimeA
 
   metadata {
@@ -90,8 +80,6 @@ resource "kubernetes_cluster_role" "avx_controller_runtimeA" {
 }
 
 resource "kubernetes_cluster_role_binding" "avx_controller_runtimeA" {
-  count = var.get_eks_config ? 1 : 0
-
   provider = kubernetes.runtimeA
 
   metadata {
@@ -112,14 +100,36 @@ resource "kubernetes_cluster_role_binding" "avx_controller_runtimeA" {
   depends_on = [module.spoke_aws_r1_control_plane_0]
 }
 
-# # Get the ServiceAccount token for kubeconfig
-data "kubernetes_secret" "avx_controller_token" {
-  count = var.get_eks_config ? 1 : 0
-
+resource "kubernetes_cluster_role" "view_nodes" {
   provider = kubernetes.runtimeA
 
   metadata {
-    name      = kubernetes_secret.avx_controller_token_runtimeA[0].metadata[0].name
+    name = "view-nodes"
+  }
+  rule {
+    verbs      = ["get", "list", "watch"]
+    api_groups = [""]
+    resources  = ["nodes"]
+  }
+  # The following 2 rules have to be added
+  rule {
+    verbs      = ["create", "patch"]
+    api_groups = ["events.k8s.io"]
+    resources  = ["events"]
+  }
+  rule {
+    verbs      = ["*"]
+    api_groups = ["networking.aviatrix.com"]
+    resources  = ["webgrouppolicies", "webgrouppolicies/status"]
+  }
+}
+
+# # Get the ServiceAccount token for kubeconfig
+data "kubernetes_secret" "avx_controller_token" {
+  provider = kubernetes.runtimeA
+
+  metadata {
+    name      = kubernetes_secret.avx_controller_token_runtimeA.metadata[0].name
     namespace = "kube-system"
   }
 
@@ -128,15 +138,13 @@ data "kubernetes_secret" "avx_controller_token" {
 
 # # Generate kubeconfig file using the template
 resource "local_file" "kubeconfig_avx" {
-  count = var.get_eks_config ? 1 : 0
-
   filename = "${path.module}/kubeconfig-avx-controller"
 
   content = templatefile("${path.module}/kubeconfig", {
-    ca_data      = data.aws_eks_cluster.runtimeA[0].certificate_authority[0].data
-    endpoint     = data.aws_eks_cluster.runtimeA[0].endpoint
-    cluster_name = "${data.aws_eks_cluster.runtimeA[0].name}-private"
-    token        = data.kubernetes_secret.avx_controller_token[0].data["token"]
+    ca_data      = data.aws_eks_cluster.runtimeA.certificate_authority[0].data
+    endpoint     = data.aws_eks_cluster.runtimeA.endpoint
+    cluster_name = "${data.aws_eks_cluster.runtimeA.name}-private"
+    token        = data.kubernetes_secret.avx_controller_token.data["token"]
   })
 
   file_permission = "0600"
@@ -147,19 +155,17 @@ resource "local_file" "kubeconfig_avx" {
 output "kubeconfig_content" {
   description = "Generated kubeconfig content for avx-controller"
   value = templatefile("${path.module}/kubeconfig", {
-    ca_data      = data.aws_eks_cluster.runtimeA[0].certificate_authority[0].data
-    endpoint     = data.aws_eks_cluster.runtimeA[0].endpoint
-    cluster_name = "${data.aws_eks_cluster.runtimeA[0].name}-private"
-    token        = data.kubernetes_secret.avx_controller_token[0].data["token"]
+    ca_data      = data.aws_eks_cluster.runtimeA.certificate_authority[0].data
+    endpoint     = data.aws_eks_cluster.runtimeA.endpoint
+    cluster_name = "${data.aws_eks_cluster.runtimeA.name}-private"
+    token        = data.kubernetes_secret.avx_controller_token.data["token"]
   })
   sensitive = true
 }
 
 resource "aviatrix_kubernetes_cluster" "eks_runtimeA_onboarding" {
-  count = var.get_eks_config ? 1 : 0
-
   cluster_id  = "${module.eks_runtimeA.eks.cluster_arn}-private"
-  kube_config = local_file.kubeconfig_avx[0].content
+  kube_config = local_file.kubeconfig_avx.content
   cluster_details {
     account_name           = var.aws_account
     account_id             = data.aviatrix_account.aws.aws_account_number
@@ -293,6 +299,19 @@ resource "kubernetes_service" "nginx_runtimeA_service" {
   depends_on = [module.spoke_aws_r1_control_plane_0]
 }
 
+# Create an Aviatrix Smart Group that matches the K8S nginx service
+resource "aviatrix_smart_group" "nginx_runtimeA_smart_group" {
+  name = "nginx-runtimeA-sg"
+  selector {
+    match_expressions {
+      type           = "k8s"
+      k8s_cluster_id = module.eks_runtimeA.eks.cluster_arn
+      k8s_namespace  = "default"
+      k8s_service    = "nginx-runtimea-service"
+    }
+  }
+}
+
 # # Output the external IP/hostname of the load balancer
 output "nginx_runtimeA_external_ip" {
   description = "External IP/hostname for nginx-runtimeA service"
@@ -312,4 +331,142 @@ output "nginx_runtimeA_access_info" {
 output "nginx_runtimeA_internal_ip" {
   description = "Internal cluster IP for nginx-runtimeA service"
   value       = kubernetes_service.nginx_runtimeA_service.spec.0.cluster_ip
+}
+
+# Apply Aviatrix WebGroupPolicies CustomResourceDefinition
+resource "kubernetes_manifest" "aviatrix_webgrouppolicies_crd_runtimeA" {
+  provider = kubernetes.runtimeA
+
+  manifest = {
+    apiVersion = "apiextensions.k8s.io/v1"
+    kind       = "CustomResourceDefinition"
+
+    metadata = {
+      annotations = {
+        "controller-gen.kubebuilder.io/version" = "v0.14.0"
+      }
+      name = "webgrouppolicies.networking.aviatrix.com"
+    }
+
+    spec = {
+      group = "networking.aviatrix.com"
+      names = {
+        kind     = "WebGroupPolicy"
+        listKind = "WebGroupPolicyList"
+        plural   = "webgrouppolicies"
+        singular = "webgrouppolicy"
+      }
+      scope = "Namespaced"
+      versions = [
+        {
+          name = "v1alpha1"
+          schema = {
+            openAPIV3Schema = {
+              description = "WebGroupPolicy is the Schema for the webgrouppolicies API"
+              properties = {
+                apiVersion = {
+                  description = "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+                  type        = "string"
+                }
+                kind = {
+                  description = "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+                  type        = "string"
+                }
+                metadata = {
+                  type = "object"
+                }
+                spec = {
+                  description = "WebGroupPolicySpec defines the desired state of WebGroupPolicy"
+                  properties = {
+                    allowedDomains = {
+                      items = {
+                        type = "string"
+                      }
+                      type = "array"
+                    }
+                    apiCategory = {
+                      enum = [
+                        "BLOCK_ALL",
+                        "ALLOW_ALL",
+                        "FILTER"
+                      ]
+                      type = "string"
+                    }
+                    target = {
+                      properties = {
+                        type = {
+                          enum = [
+                            "namespace",
+                            "service"
+                          ]
+                          type = "string"
+                        }
+                      }
+                      required = ["type"]
+                      type     = "object"
+                    }
+                  }
+                  required = ["allowedDomains", "apiCategory", "target"]
+                  type     = "object"
+                }
+                status = {
+                  properties = {
+                    appDomainUuid = {
+                      type = "string"
+                    }
+                    policyUuid = {
+                      type = "string"
+                    }
+                    targetSmartGroupUuid = {
+                      type = "string"
+                    }
+                  }
+                  type = "object"
+                }
+              }
+              required = ["spec"]
+              type     = "object"
+            }
+          }
+          served  = true
+          storage = true
+          subresources = {
+            status = {}
+          }
+        }
+      ]
+    }
+  }
+
+  depends_on = [module.spoke_aws_r1_control_plane_0]
+}
+
+# Apply WebGroupPolicy instance to the cluster
+resource "kubernetes_manifest" "webgrouppolicy_runtimeA" {
+  provider = kubernetes.runtimeA
+
+  manifest = {
+    apiVersion = "networking.aviatrix.com/v1alpha1"
+    kind       = "WebGroupPolicy"
+
+    metadata = {
+      name      = "webgrouppolicy-sample"
+      namespace = "default"
+    }
+
+    spec = {
+      allowedDomains = [
+        "monip.org"
+      ]
+      apiCategory = "FILTER"
+      target = {
+        type = "namespace"
+      }
+    }
+  }
+
+  depends_on = [
+    kubernetes_manifest.aviatrix_webgrouppolicies_crd_runtimeA,
+    module.spoke_aws_r1_control_plane_0
+  ]
 }

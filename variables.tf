@@ -102,8 +102,7 @@ variable "deploy_vpn_gateway" {
   description = "Whether to deploy the VPN gateway in control plane VPC"
 }
 
-variable "get_eks_config" {
-  type        = bool
-  default     = false
-  description = "Whether to get the EKS cluster config after creation"
+variable "human_admin_cidr" {
+  description = "CIDR block for the human admin user"
+  default     = "10.0.0.0/8"
 }
